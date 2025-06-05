@@ -11,7 +11,9 @@ import ida_idp
 import ida_nalt
 import ida_typeinf
 import ida_kernwin
+import re
 import PdbGeneratorPy
+import os
 from idautils import Functions
 
 class Registers64bit():
@@ -41,13 +43,16 @@ class DiscardedRange:
 class FunctionDataExtractor:
     def __init__(Self, TypeExtractor):
         Self.TypeExtractor = TypeExtractor
-        Self.SourceCodeOutputPath = Path.cwd() / "DecompiledSourceCode"
+        Self.SourceCodeOutputPath = Path.cwd() / f"{Path(ida_nalt.get_input_file_path()).stem}Sources"
         Self.SourceCodeOutputPath.mkdir(exist_ok=True)
 
     def GetFunctionsData(self):
+        root_name = ida_nalt.get_root_filename().lower()        
         functionsData = PdbGeneratorPy.FunctionsData()
-
         for functionEa in Functions():
+            function_name = ida_funcs.get_func_name(functionEa)
+            if function_name.startswith("unknown_libname_") or function_name.startswith("@__GetPolymorphicDTC$qpvui_") or function_name.startswith("@std@") or function_name.startswith("__GetExceptDLLinfoInternal_"):
+                continue
             functionData = self.GetFunctionData(functionEa, ExecuteSync=False)
             if functionData:
                 functionsData.append(functionData)
@@ -95,9 +100,9 @@ class FunctionDataExtractor:
             
             if not functionData.InstructionOffsetToPseudoCodeLine:
                 return
-
+            pseudoCodeThis = self.replace_this_only(pseudoCode)
             with open(functionData.FilePath, "wb") as sourceFile:
-                sourceFile.write(bytes(pseudoCode, "utf-8"))
+                sourceFile.write(bytes(pseudoCodeThis, "utf-8"))
 
         if ExecuteSync:
             ida_kernwin.execute_sync(GetFunctionDataInternal, 0)
@@ -114,7 +119,11 @@ class FunctionDataExtractor:
         for lineOfCode in PseudoCode:
             pseudoCode += idaapi.tag_remove(lineOfCode.line) + "\r\n"
         return pseudoCode
-
+    
+    def replace_this_only(self,string: str) -> str:
+        pattern = r'\bthis\b'
+        return re.sub(pattern, 'This', string)
+    
     def __GetInstructionsOffsetToPseudoCodeLines(self, DecompiledFunction, PseudoCodeLines):
         instructionOffsetsToPseudoCodeLines = PdbGeneratorPy.InstructionsToLines()
         discardedRanges = []
@@ -171,7 +180,10 @@ class FunctionDataExtractor:
             instructionOffsetsToPseudoCodeLines.insert(address, lineNumber)
 
         for discardedRange in discardedRanges:
-            startOfNextInstruction = instructionOffsetsToPseudoCodeLines.get(discardedRange.EndEa - DecompiledFunction.entry_ea)
+            result = discardedRange.EndEa - DecompiledFunction.entry_ea
+            startOfNextInstruction = None
+            if result >= 0:
+                startOfNextInstruction= instructionOffsetsToPseudoCodeLines.get(discardedRange.EndEa - DecompiledFunction.entry_ea)
             if startOfNextInstruction is None:
                 continue
 
@@ -248,9 +260,11 @@ class FunctionDataExtractor:
                 continue
 
             self.TypeExtractor.InsertTypeInfoData(lvar.type())
-
+            
             localVariable = PdbGeneratorPy.LocalVariable()
             localVariable.Name = lvar.name
+            if localVariable.Name == "this":
+                localVariable.Name = "This"
             localVariable.TypeName = self.TypeExtractor.GetTypeName(lvar.type())
 
             if lvar.is_reg_var():
@@ -301,4 +315,4 @@ class FunctionDataExtractor:
         return md5.hexdigest()
 
     def __IsX86_64(self):
-        return ida_idp.ph.id == ida_idp.PLFM_386 and ida_idp.ph.flag & ida_idp.PR_USE64
+        return idaapi.inf_is_64bit()

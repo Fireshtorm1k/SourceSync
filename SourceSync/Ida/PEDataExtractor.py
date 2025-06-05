@@ -84,6 +84,7 @@ class PEDataExtractor():
         imageDirDebug = peHeader.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG]
         if not imageDirDebug.Size:
             return None
+        print(imageDirDebug.Size)
 
         debugDirectoryBytes = ida_bytes.get_bytes(imageDirDebug.VirtualAddress + ida_nalt.get_imagebase(), imageDirDebug.Size)
         debugDirectoryCount = imageDirDebug.Size // ctypes.sizeof(IMAGE_DEBUG_DIRECTORY)

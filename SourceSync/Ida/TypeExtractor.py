@@ -36,7 +36,7 @@ class TypeExtractor:
     
     def __InsertEnumData(self):
         localTypeLibrary = ida_typeinf.get_idati()
-        allocatedOrdinals = ida_typeinf.get_ordinal_qty(localTypeLibrary) + 1
+        allocatedOrdinals = ida_typeinf.get_ordinal_count(localTypeLibrary) + 1
         for i in range(1, allocatedOrdinals):
             typeInfo = ida_typeinf.tinfo_t()
             if not typeInfo.get_numbered_type(localTypeLibrary, i):
@@ -69,7 +69,7 @@ class TypeExtractor:
 
     def __InsertStructsData(self):
         localTypeLibrary = idaapi.get_idati()
-        allocatedOrdinals = idaapi.get_ordinal_qty(localTypeLibrary) + 1
+        allocatedOrdinals = idaapi.get_ordinal_count(localTypeLibrary) + 1
 
         for i in range(1, allocatedOrdinals):
             typeInfo = ida_typeinf.tinfo_t()
