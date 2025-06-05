@@ -1,3 +1,9 @@
+# What i changed in this fork
+
+- Removed client/server for windbg
+- Updated the use of the ida API for use with ida 9.
+- Added cmake for easy build
+
 # Overview
 
 **SourceSync** is both a set of plugins for synchronisation between debugger and decompiler and a library for generating pdb from decompiler data. In the case of plugins, it establishes a connection between the debugger (Windbg, client) and the decompiler (Ida Pro, server) to dynamically generate pdb for functions in the current thread call stack that belong to the decompiled module. 
